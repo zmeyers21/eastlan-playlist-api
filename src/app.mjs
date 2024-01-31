@@ -23,7 +23,7 @@ app.get('/playlist/:stationId/:count', (req, res) => {
   });
 });
 
-app.get('/artist')
+// app.get('/artist')
 
 // Imediately crawl the sites to load the initial data
 crawlStations();
