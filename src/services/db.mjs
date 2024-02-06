@@ -153,6 +153,30 @@ export async function getLatestSongsByStation(stationId, count) {
   }
 }
 
+export async function getArtistPlaylist(stationId, artistId) {
+  const client = new MongoClient(uri);
+
+  try {
+    // Connect to the MongoDB server
+    await client.connect();
+
+    // Access the database and collection
+    const database = client.db(dbName);
+    const collection = database.collection('songs');
+
+    // Fetch all songs
+    const songs = await collection.find({
+      stationId: new mongo.ObjectId(stationId),
+      artistId: new mongo.ObjectId(artistId)
+    }).sort({_id: -1}).toArray();
+
+    return songs;
+  } finally {
+    // Close the MongoDB connection
+    await client.close();
+  }
+}
+
 export async function validateArtists(songs) {
   const client = new MongoClient(uri);
 

@@ -1,9 +1,7 @@
 import * as db from './db.mjs';
 import * as mongo from "mongodb";
 
-const stationId = '65b4b7c438fc9b72914b5b68';
-
-export async function mapSongsToArtists(playlist) {
+export async function mapSongsToArtists(playlist, stationId) {
   const mappedPlaylist = await db.getAll('artists').then(artists => {
     playlist.forEach(song => {
       const artistId = new mongo.ObjectId(artists.find(x => x.name == song.artist)?._id)
@@ -14,4 +12,14 @@ export async function mapSongsToArtists(playlist) {
     return playlist;
   });
   return mappedPlaylist;
+}
+
+export function compareByName( a, b ) {
+  if ( a.name < b.name ){
+    return -1;
+  }
+  if ( a.name > b.name ){
+    return 1;
+  }
+  return 0;
 }

@@ -1,5 +1,7 @@
 import * as scraper1 from "./scrapers/scraper1.mjs";
+import * as scraper2 from "./scrapers/scraper2.mjs";
 import * as db from "./services/db.mjs";
+import * as playlistProcessor from './services/playlist.processor.mjs';
 import * as mapper from './services/mapper.mjs';
 import express from 'express';
 import bodyParser from 'body-parser';
@@ -11,7 +13,7 @@ app.use(bodyParser.json());
 app.use(cors());
 
 const url_electric949 = 'https://www.electric949.com/station/iframe_last10played.shtml';
-const stationId_electric949 = '65b4b7c438fc9b72914b5b68';
+const url_wsks = 'http://wsks.tunegenie.com/onair/';
 
 // API endpoints
 app.get('/stations', (req, res) => {
@@ -28,6 +30,7 @@ app.get('/playlist/:stationId/:count', (req, res) => {
 
 app.get('/artists', (req, res) => {
   db.getAll('artists').then(artists => {
+    artists.sort(mapper.compareByName);
     res.json(artists);
   });
 });
@@ -38,33 +41,24 @@ app.get('/artists/:artistId', (req, res) => {
   });
 });
 
-async function scrape() {
+async function scrapeAndStash() {
 
-  // Load playlist from web
-  let electric949Playlist = await scraper1.scrape(url_electric949);
-  electric949Playlist.reverse();
+  // Electric 94.9
+  let playlist1 = await scraper1.scrape(url_electric949);
+  playlist1.reverse();
+  await playlistProcessor.process(playlist1, '65b4b7c438fc9b72914b5b68');
 
-  // Validate the artists and insert any new ones that arent saved yet
-  await db.validateArtists(electric949Playlist);
+  // KISS FM
+  let playlist2 = await scraper2.scrape(url_wsks);
+  playlist2.reverse();
+  await playlistProcessor.process(playlist2, '65bea3c1e5898920cd13991a');
 
-  // Map the songs > artists
-  const playlist = await mapper.mapSongsToArtists(electric949Playlist);
-  const recentSongsFromDB = await db.getLatestSongsByStation(stationId_electric949, playlist.length);
-  const songsToInsert = playlist.filter(a => !recentSongsFromDB.find(b => a.artistId.toString() == b.artistId.toString() && a.song == b.song));
-  
-  if (songsToInsert?.length) {
-    console.log(`adding ${songsToInsert.length} songs: `, songsToInsert);
-    await db.addMany('songs', songsToInsert);
-    console.log('songs added!');
-  } else {
-    console.log('no new songs');
-  }
 }
 
-scrape();
+scrapeAndStash();
 
 setInterval(() => {
-  scrape();
+  scrapeAndStash();
 }, 180000);
 
 app.listen(port, () => {
